@@ -5,9 +5,9 @@ set -o nounset
 set -o xtrace
 OS=$(uname)
 
-if [[ "${BETA-0}" -eq 1 ]]; then
+if [[ "${BETA:-0}" -eq 1 ]]; then
     BUILD="beta"
-elif [[ "${TEST-0}" -eq 1 ]]; then
+elif [[ "${TEST:-0}" -eq 1 ]]; then
     BUILD="test"
 else
     BUILD="live"

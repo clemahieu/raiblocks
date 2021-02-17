@@ -20,7 +20,7 @@ if (${env:artifact} -eq 1) {
     $env:RUN = "artifact"
 }
 else {
-    if ( ${env:RELEASE} -eq 1 ) {
+    if ( ${env:RELEASE} -eq "true" -or ${env:TEST_USE_ROCKSDB} -eq 1 ) {
         $env:BUILD_TYPE = "RelWithDebInfo"
     }
     else { 

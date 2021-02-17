@@ -1,6 +1,6 @@
 FROM nanocurrency/nano-env:base
 
-RUN apt-get install -yqq git
+RUN apt update -qq && apt-get install -yqq git
 
 ENV BOOST_ROOT=/tmp/boost
 
