@@ -3781,7 +3781,6 @@ void nano::json_handler::stop ()
 	response_errors ();
 	if (!ec)
 	{
-		node.stop ();
 		stop_callback ();
 	}
 }
