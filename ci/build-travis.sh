@@ -74,7 +74,7 @@ ${SANITIZERS:-} \
 
 if [[ "$OS" == 'Linux' ]]; then
     if [[ ${LCOV:-0} == 1 ]]; then
-        cmake --build ${PWD} --target generate_coverage -k -- -j2
+        cmake --build ${PWD} --target generate_coverage -- -j2
     else
         cmake --build ${PWD} --target build_tests -k -- -j2
     fi
