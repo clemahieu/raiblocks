@@ -77,7 +77,11 @@ run_tests() {
     echo "RPC  Test return code: ${rpc_test_res}"
     echo "QT Test return code: ${qt_test_res}"
     echo "Load Test return code: ${load_test_res}"
-    return ${core_test_res}
+    if [[ ${core_test_res} != 0 || ${rpc_test_res} != 0 || ${qt_test_res} != 0 || ${load_test_res} != 0]]; then
+        return 1
+    else
+        return 0
+    fi
 }
 
 cd ${build_dir}
