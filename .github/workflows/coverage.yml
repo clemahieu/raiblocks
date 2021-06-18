@@ -25,7 +25,7 @@ jobs:
     continue-on-error: true
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@5a4ac90
+      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
         with:
           submodules: "recursive"
       - name: Fetch Deps
@@ -41,7 +41,7 @@ jobs:
         env:
           TEST_USE_ROCKSDB: ${{ matrix.TEST_USE_ROCKSDB }}
         run: ./ci/build-travis.sh /usr/lib/x86_64-linux=gnu/cmake/Qt5
-      - uses: coverallsapp/github-action@8cbef1d
+      - uses: coverallsapp/github-action@8cbef1dea373ebce56de0a14c68d6267baa10b44
         with:
           github-token: ${{ secrets.github_token }}
           flag-name: rocksdb-${{ matrix.TEST_USE_ROCKSDB }},${{ github.event.inputs.label }}
@@ -50,7 +50,7 @@ jobs:
     needs: coverage_test
     runs-on: ubuntu-18.04
     steps:
-      - uses: coverallsapp/github-action@8cbef1d
+      - uses: coverallsapp/github-action@8cbef1dea373ebce56de0a14c68d6267baa10b44
         with:
           github-token: ${{ secrets.github_token }}
           parallel-finished: true

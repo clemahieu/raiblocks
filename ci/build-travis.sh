@@ -79,7 +79,7 @@ if [[ "$OS" == 'Linux' ]]; then
         cmake --build ${PWD} --target build_tests -k -- -j2
     fi
 else
-    sudo cmake --build ${PWD} --target build_tests -k -- -j2
+    sudo cmake --build ${PWD} --target build_tests -- -j2
 fi
 
 popd
