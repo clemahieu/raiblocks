@@ -28,26 +28,24 @@ fi
 mkdir build
 pushd build
 
-if [[ ${RELEASE-0} -eq 1 ]]; then
+if [[ "${RELEASE:-false}" == "true" ]]; then
     BUILD_TYPE="RelWithDebInfo"
-else
-    BUILD_TYPE="Debug"
 fi
 
-if [[ ${ASAN_INT-0} -eq 1 ]]; then
+if [[ ${ASAN_INT:-0} -eq 1 ]]; then
     SANITIZERS="-DNANO_ASAN_INT=ON"
-elif [[ ${ASAN-0} -eq 1 ]]; then
+elif [[ ${ASAN:-0} -eq 1 ]]; then
     SANITIZERS="-DNANO_ASAN=ON"
-elif [[ ${TSAN-0} -eq 1 ]]; then
+elif [[ ${TSAN:-0} -eq 1 ]]; then
     SANITIZERS="-DNANO_TSAN=ON"
-else
-    SANITIZERS=""
+elif [[ ${LCOV:-0} -eq 1 ]]; then
+    SANITIZERS="-DCOVERAGE=ON"
 fi
 
 ulimit -S -n 8192
 
 if [[ "$OS" == 'Linux' ]]; then
-    if clang --version; then
+    if clang --version && [ ${LCOV:-0} == 0 ]; then
         BACKTRACE="-DNANO_STACKTRACE_BACKTRACE=ON \
         -DBACKTRACE_INCLUDE=</tmp/backtrace.h>"
     else
@@ -64,22 +62,24 @@ cmake \
 -DNANO_GUI=ON \
 -DPORTABLE=1 \
 -DNANO_WARN_TO_ERR=ON \
--DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+-DCMAKE_BUILD_TYPE=${BUILD_TYPE:-Debug} \
 -DCMAKE_VERBOSE_MAKEFILE=ON \
--DBOOST_ROOT=/tmp/boost/ \
+-DBOOST_ROOT=${BOOST_ROOT:-/tmp/boost/} \
 -DNANO_SHARED_BOOST=ON \
 -DQt5_DIR=${qt_dir} \
 -DCI_TEST="1" \
-${BACKTRACE} \
-${SANITIZERS} \
+${BACKTRACE:-} \
+${SANITIZERS:-} \
 ..
 
 if [[ "$OS" == 'Linux' ]]; then
-    cmake --build ${PWD} -- -j2
+    if [[ ${LCOV:-0} == 1 ]]; then
+        cmake --build ${PWD} --target generate_coverage -- -j2
+    else
+        cmake --build ${PWD} --target build_tests -k -- -j2
+    fi
 else
-    sudo cmake --build ${PWD} -- -j2
+    sudo cmake --build ${PWD} --target build_tests -- -j2
 fi
 
 popd
-
-./ci/test.sh ./build

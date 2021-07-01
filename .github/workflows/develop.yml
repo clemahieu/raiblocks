@@ -3,7 +3,7 @@ name: Develop
 on:
   push:
     branches:
-      - develop  
+      - develop
 jobs:
   linux_job:
     runs-on: ubuntu-18.04

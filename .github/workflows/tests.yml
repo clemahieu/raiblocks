@@ -5,12 +5,21 @@ on: [push, pull_request]
 env:
   RELEASE: 0
   artifact: 0
-  
+
 jobs:
   osx_test:
-    runs-on: macos-latest
+    name: OSX unit tests [TEST_USE_ROCKSDB=${{ matrix.TEST_USE_ROCKSDB }}]
+    strategy:
+      fail-fast: false
+      matrix:
+        TEST_USE_ROCKSDB: [0, 1]
+        RELEASE: 
+          - ${{ startsWith(github.ref, 'refs/tags/') }}
     env:
       BOOST_ROOT: /tmp/boost
+      TEST_USE_ROCKSDB: ${{ matrix.TEST_USE_ROCKSDB }}
+      RELEASE: ${{ matrix.RELEASE }}
+    runs-on: macos-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
       - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -18,12 +27,32 @@ jobs:
           submodules: "recursive"
       - name: Fetch Deps
         run: TEST=1 ci/actions/osx/install_deps.sh
-      - name: Run Tests
+      - name: Build Tests
         run: ci/build-travis.sh "/tmp/qt/lib/cmake/Qt5";
+      - name: Run Tests lmdb
+        if: ${{ matrix.TEST_USE_ROCKSDB == 0 }}
+        run: cd build && sudo TEST_USE_ROCKSDB=$TEST_USE_ROCKSDB ../ci/test.sh .
+      - name: Run Tests rocksdb
+        env:
+          DEADLINE_SCALE_FACTOR: 2
+        if: ${{ matrix.TEST_USE_ROCKSDB == 1 }}
+        run: cd build && sudo TEST_USE_ROCKSDB=$TEST_USE_ROCKSDB ../ci/test.sh .
 
-  gcc_test:
+  linux_test:
+    name: Linux Unit Tests [TEST_USE_ROCKSDB=${{ matrix.TEST_USE_ROCKSDB }} - COMPILER=${{ matrix.COMPILER }}]
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        TEST_USE_ROCKSDB: [0, 1]
+        COMPILER: [gcc, clang-6]
+        RELEASE: 
+          - ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-18.04
-    timeout-minutes: 60
+    env:
+      COMPILER: ${{ matrix.COMPILER }}
+      TEST_USE_ROCKSDB: ${{ matrix.TEST_USE_ROCKSDB }}
+      RELEASE: ${{ matrix.RELEASE }}
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
       - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -31,25 +60,31 @@ jobs:
           submodules: "recursive"
       - name: Fetch Deps
         run: ci/actions/linux/install_deps.sh
-      - name: Run Tests
-        run: docker run -v ${PWD}:/workspace nanocurrency/nano-env:gcc /bin/bash -c "cd /workspace && ./ci/build-travis.sh /usr/lib/x86_64-linux-gnu/cmake/Qt5 ${PWD}"
-  
-  clang_test:
-    runs-on: ubuntu-18.04
-    timeout-minutes: 60
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-        with:
-          submodules: "recursive"
-      - name: Fetch Deps
-        run: ci/actions/linux/install_deps.sh
-      - name: Run Tests
-        run: docker run -v ${PWD}:/workspace nanocurrency/nano-env:clang-6 /bin/bash -c "cd /workspace && ./ci/build-travis.sh /usr/lib/x86_64-linux-gnu/cmake/Qt5 ${PWD}"
+      - name: Build Tests
+        run: docker run -e TEST_USE_ROCKSDB  -e RELEASE -v ${PWD}:/workspace nanocurrency/nano-env:${{ matrix.COMPILER }} /bin/bash -c "cd /workspace && ./ci/build-travis.sh /usr/lib/x86_64-linux-gnu/cmake/Qt5"
+      - name: Run Tests lmdb
+        if: ${{ matrix.TEST_USE_ROCKSDB == 0 }}
+        run: docker run  -e RELEASE -v ${PWD}:/workspace nanocurrency/nano-env:${{ matrix.COMPILER }} /bin/bash -c "cd /workspace/build && ../ci/test.sh ."
+      - name: Run Tests rocksdb
+        if: ${{ matrix.TEST_USE_ROCKSDB == 1 }}
+        run: docker run -e TEST_USE_ROCKSDB -e DEADLINE_SCALE_FACTOR=2  -e RELEASE -v ${PWD}:/workspace nanocurrency/nano-env:${{ matrix.COMPILER }} /bin/bash -c "cd /workspace/build && ../ci/test.sh ."
 
   windows_test:
+    name: Windows Unit Tests [TEST_USE_ROCKSDB=${{ matrix.TEST_USE_ROCKSDB }}]
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        TEST_USE_ROCKSDB: [0, 1]
+        RELEASE: 
+          - ${{ startsWith(github.ref, 'refs/tags/') }}
+        exclude:
+          - RELEASE: true
+            TEST_USE_ROCKSDB: 1
     runs-on: windows-latest
-    timeout-minutes: 60
+    env:
+      TEST_USE_ROCKSDB: ${{ matrix.TEST_USE_ROCKSDB }}
+      RELEASE: ${{ matrix.RELEASE }}
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
       - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -57,8 +92,13 @@ jobs:
           submodules: "recursive"
       - name: Windows Defender
         run: ci/actions/windows/disable_windows_defender.ps1
-
       - name: Fetch Deps
         run: ci/actions/windows/install_deps.ps1
-      - name: Run Tests
+      - name: Run Tests lmdb
+        if: ${{ matrix.TEST_USE_ROCKSDB == 0 }}
+        run: ci/actions/windows/build.ps1
+      - name: Run Tests rocksdb
+        if: ${{ matrix.TEST_USE_ROCKSDB == 1 }}
+        env:
+          DEADLINE_SCALE_FACTOR: 2
         run: ci/actions/windows/build.ps1

@@ -1,0 +1,56 @@
+name: Coverage Reports
+
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: "label to append to run"
+        default: "Scheduled"
+        required: true
+  schedule:
+    - cron: "0 1 * * 0"
+jobs:
+  coverage_test:
+    name: Coverage Test [TEST_USE_ROCKSDB=${{ matrix.TEST_USE_ROCKSDB }}]
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    env:
+      LCOV: 1
+      COMPILER: gcc
+      BOOST_ROOT: /tmp/boost
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        TEST_USE_ROCKSDB: [0, 1]
+      fail-fast: false
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        with:
+          submodules: "recursive"
+      - name: Fetch Deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -yqq build-essential g++ wget python zlib1g-dev qt5-default \
+          valgrind xorg xvfb xauth xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic ocl-icd-opencl-dev \
+          git lcov python3-pip
+          util/build_prep/fetch_boost.sh
+          wget -O cmake_install.sh https://github.com/Kitware/CMake/releases/download/v3.15.4/cmake-3.15.4-Linux-x86_64.sh
+          chmod +x cmake_install.sh
+          sudo ./cmake_install.sh --prefix=/usr --exclude-subdir --skip-license
+      - name: Build and Test
+        env:
+          TEST_USE_ROCKSDB: ${{ matrix.TEST_USE_ROCKSDB }}
+        run: ./ci/build-travis.sh /usr/lib/x86_64-linux=gnu/cmake/Qt5
+      - uses: coverallsapp/github-action@8cbef1dea373ebce56de0a14c68d6267baa10b44
+        with:
+          github-token: ${{ secrets.github_token }}
+          flag-name: rocksdb-${{ matrix.TEST_USE_ROCKSDB }},${{ github.event.inputs.label }}
+          parallel: true
+  finish:
+    needs: coverage_test
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: coverallsapp/github-action@8cbef1dea373ebce56de0a14c68d6267baa10b44
+        with:
+          github-token: ${{ secrets.github_token }}
+          parallel-finished: true

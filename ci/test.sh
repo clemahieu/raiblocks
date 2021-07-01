@@ -29,7 +29,7 @@ xvfb_run_() {
     Xvfb :2 -screen 0 1024x768x24 &
     xvfb_pid=$!
     sleep ${INIT_DELAY_SEC}
-    DISPLAY=:2 ${TIMEOUT_CMD} ${TIMEOUT_TIME_ARG} ${TIMEOUT_SEC-${TIMEOUT_DEFAULT}} $@
+    DISPLAY=:2 ${TIMEOUT_CMD} ${TIMEOUT_TIME_ARG} ${TIMEOUT_DEFAULT} $@
     res=${?}
     kill ${xvfb_pid}
 
@@ -57,27 +57,31 @@ run_tests() {
             sleep $((30 + (RANDOM % 30)))
         fi
 
-        ${TIMEOUT_CMD} ${TIMEOUT_TIME_ARG} ${TIMEOUT_SEC-${TIMEOUT_DEFAULT}} ./core_test
+        ${TIMEOUT_CMD} ${TIMEOUT_TIME_ARG} ${TIMEOUT_DEFAULT} ./core_test
         core_test_res=${?}
         if [ "${core_test_res}" = '0' ]; then
             break
         fi
     done
 
-    xvfb_run_ ./rpc_test
+    ${TIMEOUT_CMD} ${TIMEOUT_TIME_ARG} ${TIMEOUT_DEFAULT} ./rpc_test
     rpc_test_res=${?}
 
     xvfb_run_ ./qt_test
     qt_test_res=${?}
 
-    ${TIMEOUT_CMD} ${TIMEOUT_TIME_ARG} ${TIMEOUT_SEC-${TIMEOUT_DEFAULT}} ./load_test -s 150 -n 5
+    ${TIMEOUT_CMD} ${TIMEOUT_TIME_ARG} ${TIMEOUT_DEFAULT} ./load_test -s 150 -n 5
     load_test_res=${?}
 
     echo "Core Test return code: ${core_test_res}"
     echo "RPC  Test return code: ${rpc_test_res}"
     echo "QT Test return code: ${qt_test_res}"
     echo "Load Test return code: ${load_test_res}"
-    return ${core_test_res}
+    if [[ ${core_test_res} != 0 || ${rpc_test_res} != 0 || ${qt_test_res} != 0 || ${load_test_res} != 0 ]]; then
+        return 1
+    else
+        return 0
+    fi
 }
 
 cd ${build_dir}
